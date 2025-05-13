@@ -31,8 +31,11 @@
 
 // The namespace "scls" is used to simplify the all.
 namespace scls {
+
+    // Connects the socket
+    #if defined(__WIN32__) || defined(__WIN64__) // With Windows
     // Datas of the WSA server
-    WSADATA __wsa_data;bool __wsa_started = false;
+    bool __network_started = false;WSADATA __wsa_data;
 
     // Gets informations about an address
     int address_informations(struct addrinfo **informations, std::string ip, int port) {
@@ -131,8 +134,42 @@ namespace scls {
     }
 
     // Initializes Winsock
-    int start_wsa() {if(__wsa_started){return 0;}int result = WSAStartup(MAKEWORD(2,2), &__wsa_data);if (result != 0) {scls::print("WSA Server", std::string("Can't open the server because of error ") + std::to_string(result));return 1;}__wsa_started=true;return 0;}
+    int start_wsa() {int result = WSAStartup(MAKEWORD(2,2), &__wsa_data);if (result != 0) {scls::print("WSA Server", std::string("Can't open the server because of error ") + std::to_string(result));return 1;}__network_started=true;return 0;}
 
     // Get Winsock
     WSADATA& wsa_data(){start_wsa();return __wsa_data;}
+
+    //*********
+    //
+    // The Socket class
+    //
+    //*********
+
+    // Gets the informations about the address
+    int Socket::__address_informations_windows(){return address_informations(&a_address_informations, a_ip, a_port);};
+
+    // Connects the socket
+    void Socket::__connect_windows(){
+
+    };
+
+    #endif
+    #ifdef __linux__ // With Linux
+
+    //*********
+    //
+    // The Socket class
+    //
+    //*********
+
+    // Gets the informations about the address
+    int Socket::__address_informations_linux(){
+        return 0;
+    };
+
+    // Connects the socket
+    void Socket::__connect_linux(){
+
+    };
+    #endif
 }

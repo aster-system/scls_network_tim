@@ -43,7 +43,7 @@ namespace scls {
         // Class representating a FTP client
     public:
         // FTP_Client constructor
-        FTP_Client(std::string ip):a_ip(ip){start_wsa();int result = address_informations(&a_address_informations, ip, 21);};
+        FTP_Client(std::string ip):a_ip(ip),a_socket(ip, 21){};
         // FTP_Client destructor
         ~FTP_Client(){closesocket(a_socket);};
 
@@ -83,9 +83,9 @@ namespace scls {
         }
 
         // Sends an FTP request
-        int ftp_request(SOCKET* needed_socket, std::string request, Server_Response* response);
-        int ftp_request_no_noop(SOCKET* needed_socket, std::string request, Server_Response* response);
-        int ftp_request_no_receive(SOCKET* needed_socket, std::string request, Server_Response* response);
+        int ftp_request(Socket* needed_socket, std::string request, Server_Response* response);
+        int ftp_request_no_noop(Socket* needed_socket, std::string request, Server_Response* response);
+        int ftp_request_no_receive(Socket* needed_socket, std::string request, Server_Response* response);
 
     private:
         // Address informations
@@ -95,7 +95,7 @@ namespace scls {
         // IP of the FTP server
         std::string a_ip;
         // Socket used
-        SOCKET a_socket;
+        Socket a_socket;
     };
 }
 
