@@ -37,49 +37,33 @@ namespace scls {
     //*********
 
     // Sends an FTP request
-    int FTP_Client::ftp_request(SOCKET* needed_socket, std::string request, Server_Response* response) {
+    int FTP_Client::ftp_request(Socket* needed_socket, std::string request, Server_Response* response) {
         // Parse the request
         if(request.substr(request.size() - 6, 6) != std::string("NOOP\r\n") && request.substr(request.size() - 6, 6) != std::string("QUIT\r\n")){request = request + std::string("NOOP\r\n");}
         return ftp_request_no_noop(needed_socket, request, response);
     }
-    int FTP_Client::ftp_request_no_noop(SOCKET* needed_socket, std::string request, Server_Response* response) {
+    int FTP_Client::ftp_request_no_noop(Socket* needed_socket, std::string request, Server_Response* response) {
         // Send the request
-        int iResult = send(*needed_socket, request.c_str(), static_cast<int>(request.size()), 0 );
+        int iResult = a_socket.send_datas(request);
         if (iResult == SOCKET_ERROR) {
             printf("send failed with error: %d\n", WSAGetLastError());
-            closesocket(*needed_socket);
+            a_socket.close();
             return -1;
         }
 
         // Receive data until the server closes the connection
-        #define DEFAULT_BUFLEN 512
-        int datas_size = 0;std::vector<std::shared_ptr<Bytes_Set>> datas;
-        int recvbuflen = DEFAULT_BUFLEN;char recvbuf[DEFAULT_BUFLEN];
-        int result = 0;
-        do {
-            result = recv(*needed_socket, recvbuf, recvbuflen, 0);
-            if (result > 0){datas_size += result;datas.push_back(std::make_shared<Bytes_Set>());datas.at(datas.size() - 1).get()->add_datas(recvbuf, result);}
-            else if (result < 0){return -2;}
-
-            if(scls::contains_string(datas.at(datas.size() - 1).get()->extract_string_all(), std::string("NOOP"))){break;}
-        }
-        while (result > 0);
-
-        // Get the final datas
-        std::shared_ptr<Bytes_Set>& final_datas = response->datas;
-        final_datas = std::make_shared<Bytes_Set>(datas_size);int pos = 0;
-        for(int i = 0;i<static_cast<int>(datas.size());i++){final_datas.get()->put_datas(datas.at(i).get(), pos);pos += datas.at(i)->datas_size();}
+        int result = needed_socket->receive_datas(response);
         return 0;
     }
-    int FTP_Client::ftp_request_no_receive(SOCKET* needed_socket, std::string request, Server_Response* response) {
+    int FTP_Client::ftp_request_no_receive(Socket* needed_socket, std::string request, Server_Response* response) {
         // Parse the request
         if(request.size() < 6 || (request.substr(request.size() - 6, 6) != std::string("NOOP\r\n") && request.substr(request.size() - 6, 6) != std::string("QUIT\r\n"))){request = request + std::string("NOOP\r\n");}
 
         // Send the request
-        int iResult = send(*needed_socket, request.c_str(), static_cast<int>(request.size()), 0 );
+        int iResult = a_socket.send_datas(request);
         if (iResult == SOCKET_ERROR) {
             printf("send failed with error: %d\n", WSAGetLastError());
-            closesocket(*needed_socket);
+            a_socket.close();
             return -1;
         }
 

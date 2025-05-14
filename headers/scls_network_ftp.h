@@ -45,25 +45,20 @@ namespace scls {
         // FTP_Client constructor
         FTP_Client(std::string ip):a_ip(ip),a_socket(ip, 21){};
         // FTP_Client destructor
-        ~FTP_Client(){closesocket(a_socket);};
+        ~FTP_Client(){a_socket.close();};
 
         // Connects the client
         int connect(){
             // Create and connect a SOCKET for the server
-            int error = 0;
-            SOCKET& needed_socket = a_socket;
-            needed_socket = scls::create_socket(a_address_informations);
-            if(needed_socket == INVALID_SOCKET){print(std::string("FTP Client \"") + a_ip + std::string("\""), std::string("Unable to create a socket"));freeaddrinfo(a_address_informations);return -1;}
-            if(error >= 0){
-                scls::connect_socket(needed_socket, a_address_informations);freeaddrinfo(a_address_informations);
-                if (needed_socket == INVALID_SOCKET) {print(std::string("FTP Client \"") + a_ip + std::string("\""), std::string("Unable to connect to the server"));return -2;}
-            }
+            int error = a_socket.connect();
+            if(error == -1){print(std::string("FTP Client \"") + a_ip + std::string("\""), std::string("Unable to create a socket"));return -1;}
+            if(error == -2){print(std::string("FTP Client \"") + a_ip + std::string("\""), std::string("Unable to connect to the server"));return -2;}
 
             // Send the authentification request
             Server_Response response;
             // Get the DTP IP
-            error = ftp_request(&needed_socket, "USER anonymous\r\nPASS astersystemeoff@gmail.com\r\nMODE binary", &response);if(error < 0){return error;}
-            error = ftp_request(&needed_socket, std::string("EPSV\r\n"), &response);if(error < 0){return error;}
+            error = ftp_request(&a_socket, "USER anonymous\r\nPASS astersystemeoff@gmail.com\r\nMODE binary", &response);if(error < 0){return error;}
+            error = ftp_request(&a_socket, std::string("EPSV\r\n"), &response);if(error < 0){return error;}
             std::vector<std::string> cutted = scls::cut_string(response.datas.get()->extract_string_all(), std::string("|"));
             if(cutted.size() > 2){a_dtp_port = std::stoi(cutted.at(cutted.size() - 2));}
 

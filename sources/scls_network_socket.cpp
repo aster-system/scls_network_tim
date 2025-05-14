@@ -98,9 +98,9 @@ namespace scls {
         // Create and connect a SOCKET for the server
         int error = 0;
         SOCKET needed_socket = scls::create_socket(address);
-        if(needed_socket == INVALID_SOCKET){printf("Unable to create a socket!\n");__wsa_started=false;WSACleanup();freeaddrinfo(address);error = -1;}
+        if(needed_socket == INVALID_SOCKET){printf("Unable to create a socket!\n");__network_started=false;WSACleanup();freeaddrinfo(address);error = -1;}
         if(error >= 0){
-            scls::connect_socket(needed_socket, address);__wsa_started=false;freeaddrinfo(address);
+            scls::connect_socket(needed_socket, address);__network_started=false;freeaddrinfo(address);
             if (needed_socket == INVALID_SOCKET) {printf("Unable to connect to server!\n");WSACleanup();error = -2;}
         }
 
@@ -115,7 +115,7 @@ namespace scls {
         scls::start_wsa();
         struct addrinfo* infos = 0;
         int result = scls::address_informations(&infos, ip, port);
-        if(result != 0){WSACleanup();__wsa_started=false;freeaddrinfo(infos);return Server_Response();}
+        if(result != 0){WSACleanup();__network_started=false;freeaddrinfo(infos);return Server_Response();}
 
         // Send the request
         bool validation = false;Server_Response response;
@@ -126,7 +126,7 @@ namespace scls {
         // Get the address informations
         scls::start_wsa();
         int result = scls::address_informations(&__temp_infos, ip, port);
-        if(result != 0){WSACleanup();__wsa_started=false;freeaddrinfo(__temp_infos);return 1;}
+        if(result != 0){WSACleanup();__network_started=false;freeaddrinfo(__temp_infos);return 1;}
 
         // Asynchronaly send the request
         (*used_thread) = std::thread(__send_request, __temp_infos, ip, port, request, response, validation);
@@ -149,9 +149,44 @@ namespace scls {
     int Socket::__address_informations_windows(){return address_informations(&a_address_informations, a_ip, a_port);};
 
     // Connects the socket
-    void Socket::__connect_windows(){
+    int Socket::__connect_windows(){
+        // Create and connect the SOCKET for the server
+        int error = 0;
+        a_socket_handle = scls::create_socket(a_address_informations);
+        if(a_socket_handle == INVALID_SOCKET){freeaddrinfo(a_address_informations);error = -1;}
+        if(error >= 0){
+            scls::connect_socket(a_socket_handle, a_address_informations);freeaddrinfo(a_address_informations);
+            if (a_socket_handle == INVALID_SOCKET) {error = -2;}
+        }
 
+        // Return the result
+        return error;
     };
+
+    // Receives informations to the server
+    Server_Response Socket::receive_datas(){Server_Response datas;receive_datas(&datas);return datas;};
+    int Socket::__receive_datas_windows(Server_Response* response){
+        // Receive data until the server closes the connection
+        #define DEFAULT_BUFLEN 512
+        int datas_size = 0;std::vector<std::shared_ptr<Bytes_Set>> datas;
+        int recvbuflen = DEFAULT_BUFLEN;char recvbuf[DEFAULT_BUFLEN];
+        int result = 0;
+        do {
+            result = recv(a_socket_handle, recvbuf, recvbuflen, 0);
+            if (result > 0){datas_size += result;datas.push_back(std::make_shared<Bytes_Set>());datas.at(datas.size() - 1).get()->add_datas(recvbuf, result);}
+            else if (result < 0){return -2;}
+        }
+        while (result > 0);
+
+        // Get the final datas
+        std::shared_ptr<Bytes_Set>& final_datas = response->datas;
+        final_datas = std::make_shared<Bytes_Set>(datas_size);int pos = 0;
+        for(int i = 0;i<static_cast<int>(datas.size());i++){final_datas.get()->put_datas(datas.at(i).get(), pos);pos += datas.at(i)->datas_size();}
+        return 0;
+    }
+
+    // Sends informations to the server
+    int Socket::__send_datas_windows(const char* datas, int datas_size){return send(a_socket_handle, datas, datas_size, 0);}
 
     #endif
     #ifdef __linux__ // With Linux

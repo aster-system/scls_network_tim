@@ -52,6 +52,9 @@ extern "C" {
 // The namespace "scls" is used to simplify the all.
 namespace scls {
 
+    // Response of a server
+    struct Server_Response{std::shared_ptr<Bytes_Set> datas;};
+
     #if defined(__WIN32__) || defined(__WIN64__) // With Windows
     // Gets informations about an address
     int address_informations(struct addrinfo **informations, std::string ip, int port);
@@ -96,14 +99,27 @@ namespace scls {
         #endif
     };
 
-    // Response of a server
-    struct Server_Response{std::shared_ptr<Bytes_Set> datas;};
-
     class Socket {
         // Class representating a network socket
     public:
         // Socket constructor
         Socket(std::string ip, int port):a_ip(ip),a_port(port){start_network();__address_informations();};
+
+        // Gets the informations about the address
+        #if defined(__WIN32__) || defined(__WIN64__) // With Windows
+        int __address_informations_windows();
+        #endif
+        #ifdef __linux__ // With Linux
+        int __address_informations_linux();
+        #endif
+        int __address_informations(){
+            #if defined(__WIN32__) || defined(__WIN64__) // With Windows
+            return __address_informations_windows();
+            #endif
+            #ifdef __linux__ // With Linux
+            return __address_informations_linux();
+            #endif
+        };
 
         // Closes the socket
         int close(){
@@ -124,37 +140,60 @@ namespace scls {
 
         // Connects the socket
         #if defined(__WIN32__) || defined(__WIN64__) // With Windows
-        void __connect_windows();
+        int __connect_windows();
         #endif
         #ifdef __linux__ // With Linux
-        void __connect_linux();
+        int __connect_linux();
         #endif
-        void connect(){
+        int connect(){
             #if defined(__WIN32__) || defined(__WIN64__) // With Windows
-            __connect_windows();
+            return __connect_windows();
             #endif
             #ifdef __linux__ // With Linux
-            __connect_linux();
+            return __connect_linux();
             #endif
         };
 
-        // Gets the informations about the address
-        #if defined(__WIN32__) || defined(__WIN64__) // With Windows
-        int __address_informations_windows();
+        // Receives informations to the server
+        // With Windows
+        #if defined(__WIN32__) || defined(__WIN64__)
+        int __receive_datas_windows(Server_Response* response);
         #endif
-        #ifdef __linux__ // With Linux
-        int __address_informations_linux();
+        // With Linux
+        #ifdef __linux__
+        int __receive_datas_linux(Server_Response* response);
         #endif
-        int __address_informations(){
-            #if defined(__WIN32__) || defined(__WIN64__) // With Windows
-            return __address_informations_windows();
+        Server_Response receive_datas();
+        int receive_datas(Server_Response* response){
+            #if defined(__WIN32__) || defined(__WIN64__)
+            return __receive_datas_windows(response);
             #endif
-            #ifdef __linux__ // With Linux
-            return __address_informations_linux();
+            // With Linux
+            #ifdef __linux__
+            return __receive_datas_linux(response);
             #endif
         };
 
-    private:
+        // Sends informations to the server
+        // With Windows
+        #if defined(__WIN32__) || defined(__WIN64__)
+        int __send_datas_windows(const char* datas, int datas_size);
+        #endif
+        // With Linux
+        #ifdef __linux__
+        int __send_datas_linux(const char* datas, int datas_size);
+        #endif
+        int send_datas(std::string datas){
+            #if defined(__WIN32__) || defined(__WIN64__)
+            return __send_datas_windows(datas.c_str(), datas.size());
+            #endif
+            // With Linux
+            #ifdef __linux__
+            return __send_datas_linux(datas.c_str(), datas.size());
+            #endif
+        };
+
+     private:
 
         // Set the network datas
         // IP of the server
@@ -166,6 +205,7 @@ namespace scls {
 
         // Set the good socket datas
         #if defined(__WIN32__) || defined(__WIN64__) // With Windows
+        struct addrinfo* a_address_informations = 0;
         SOCKET a_socket_handle;
         #endif
         #ifdef __linux__ // With Linux
