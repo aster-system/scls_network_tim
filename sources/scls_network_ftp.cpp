@@ -47,7 +47,7 @@ namespace scls {
         int iResult = a_socket.send_datas(request);
         if (iResult == SOCKET_ERROR) {
             printf("send failed with error: %d\n", WSAGetLastError());
-            a_socket.close();
+            a_socket.close_socket();
             return -1;
         }
 
@@ -63,7 +63,7 @@ namespace scls {
         int iResult = a_socket.send_datas(request);
         if (iResult == SOCKET_ERROR) {
             printf("send failed with error: %d\n", WSAGetLastError());
-            a_socket.close();
+            a_socket.close_socket();
             return -1;
         }
 
