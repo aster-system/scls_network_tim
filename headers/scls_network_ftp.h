@@ -45,7 +45,7 @@ namespace scls {
         // FTP_Client constructor
         FTP_Client(std::string ip):a_ip(ip),a_socket(ip, 21){};
         // FTP_Client destructor
-        ~FTP_Client(){a_socket.close();};
+        ~FTP_Client(){a_socket.close_socket();};
 
         // Connects the client
         int connect(){

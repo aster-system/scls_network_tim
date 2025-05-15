@@ -164,7 +164,6 @@ namespace scls {
     };
 
     // Receives informations to the server
-    Server_Response Socket::receive_datas(){Server_Response datas;receive_datas(&datas);return datas;};
     int Socket::__receive_datas_windows(Server_Response* response){
         // Receive data until the server closes the connection
         #define DEFAULT_BUFLEN 512
@@ -191,6 +190,9 @@ namespace scls {
     #endif
     #ifdef __linux__ // With Linux
 
+    // Connects a socket
+    int connect_socket(int needed_socket, struct sockaddr_in* address_informations){int result = connect(needed_socket, reinterpret_cast<struct sockaddr*>(address_informations), sizeof(*address_informations));return result;}
+
     //*********
     //
     // The Socket class
@@ -199,12 +201,60 @@ namespace scls {
 
     // Gets the informations about the address
     int Socket::__address_informations_linux(){
+        // Get the host name
+        struct hostent* server = gethostbyname(a_ip.c_str());
+
+        // Copy the informations
+        a_address_informations.sin_family = AF_INET;
+        a_address_informations.sin_port = htons(a_port);
+        std::string needed_ip;
+        for(int i = 0;i<server->h_length;i++){needed_ip+=std::to_string(static_cast<unsigned char>(server->h_addr[i]));if(i != server->h_length-1){needed_ip += std::string(".");} }
+        int error = inet_pton(AF_INET, needed_ip.c_str(), &a_address_informations.sin_addr);
+
+        // Returns the result
         return 0;
     };
 
     // Connects the socket
-    void Socket::__connect_linux(){
+    int Socket::__connect_linux(){
+        // Create the socket
+        a_socket_handle = socket(AF_INET, SOCK_STREAM, 0);
+        if(a_socket_handle < 0){int error = errno;return error;}
 
+        // Connect the socket and the server
+        int error = connect_socket(a_socket_handle, &a_address_informations);
+        if(error < 0){error = errno;return error;}
+
+        // Returns the result
+        return error;
     };
+
+    // Receives informations to the server
+    int Socket::__receive_datas_linux(Server_Response* response) {
+        // Receive data until the server closes the connection
+        #define DEFAULT_BUFLEN 512
+        int datas_size = 0;std::vector<std::shared_ptr<Bytes_Set>> datas;
+        int recvbuflen = DEFAULT_BUFLEN;char recvbuf[DEFAULT_BUFLEN];
+        int result = 0;
+        do {
+            // Receive the datas
+            result = recv(a_socket_handle, recvbuf, recvbuflen, 0);
+            if (result > 0){datas_size += result;datas.push_back(std::make_shared<Bytes_Set>());datas.at(datas.size() - 1).get()->add_datas(recvbuf, result);}
+            else if (result < 0){return -2;}
+        } while(result > 0);
+
+        // Get the final datas
+        std::shared_ptr<Bytes_Set>& final_datas = response->datas;
+        final_datas = std::make_shared<Bytes_Set>(datas_size);int pos = 0;
+        for(int i = 0;i<static_cast<int>(datas.size());i++){final_datas.get()->put_datas(datas.at(i).get(), pos);pos += datas.at(i)->datas_size();}
+        return 0;
+    }
+
+    // Sends informations to the server
+    int Socket::__send_datas_linux(const char* datas, int datas_size) {int error = write(a_socket_handle, datas, datas_size);if(error > 0){return 0;}return -1;}
+
     #endif
+
+    // General functions
+    Server_Response Socket::receive_datas(){Server_Response datas;receive_datas(&datas);return datas;};
 }

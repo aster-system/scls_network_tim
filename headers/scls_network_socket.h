@@ -39,6 +39,7 @@ extern "C" {
 #ifdef __linux__ // With Linux
 // Include the good header file
 extern "C" {
+    #include <arpa/inet.h>
     #include <netdb.h>
     #include <netinet/in.h>
     #include <sys/socket.h>
@@ -122,7 +123,7 @@ namespace scls {
         };
 
         // Closes the socket
-        int close(){
+        int close_socket(){
             // Asserts
             if(!a_opened){return 0;}
             a_opened = false;
@@ -210,7 +211,6 @@ namespace scls {
         #endif
         #ifdef __linux__ // With Linux
         struct sockaddr_in a_address_informations;
-        struct hostent* a_server;
         int a_socket_handle;
         #endif
     };
